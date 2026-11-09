@@ -1,0 +1,1126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Original.Collection</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#1c0b33;
+  --bg2:#2b1150;
+  --panel:#321a5c;
+  --panel2:#3f2270;
+  --line:#6b3fa8;
+  --yellow:#ffcb05;
+  --yellow2:#ffe27a;
+  --purple:#a66cff;
+  --text:#fff6d5;
+  --muted:#c9b6ee;
+  --heart:#ff6fa3;
+  --ok:#7dffb2;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:radial-gradient(circle at top,var(--bg2),var(--bg) 70%);
+  background-attachment:fixed;
+  color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  min-height:100vh;
+}
+.pixel{font-family:"Press Start 2P",monospace;letter-spacing:0}
+
+/* ---------- Title / loading screen ---------- */
+#boot{
+  position:fixed;inset:0;z-index:100;
+  background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;
+  transition:opacity .6s ease, visibility .6s;
+  overflow:hidden;
+}
+#boot.gone{opacity:0;visibility:hidden}
+#boot::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 2px,transparent 2px 4px);
+}
+.stars{position:absolute;inset:0;pointer-events:none}
+.stars i{
+  position:absolute;width:4px;height:4px;background:var(--yellow);
+  animation:twinkle 1.6s steps(2,end) infinite;
+}
+@keyframes twinkle{50%{opacity:.15}}
+.logo{
+  font-size:clamp(18px,4vw,34px);
+  color:var(--yellow);
+  text-align:center;line-height:1.5;
+  text-shadow:4px 4px 0 #3b1a6e, 0 0 18px rgba(255,203,5,.35);
+  animation:bob 1.2s steps(2,end) infinite;
+}
+.logo small{display:block;font-size:.55em;color:var(--purple);margin-top:12px;text-shadow:3px 3px 0 #000}
+.logo .dot{color:var(--purple)}
+@keyframes bob{50%{transform:translateY(-4px)}}
+.ball{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(180deg,#ff4d4d 0 45%,#111 45% 55%,#fff 55%);
+  border:4px solid #111;
+  box-shadow:0 0 0 3px var(--yellow);
+  animation:spin 1.1s steps(8,end) infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.bar{
+  width:min(360px,80vw);height:20px;border:3px solid var(--yellow);
+  background:#120624;padding:3px;position:relative;
+  box-shadow:4px 4px 0 #000;
+}
+.bar i{
+  display:block;height:100%;width:0%;
+  background:repeating-linear-gradient(90deg,var(--purple) 0 12px,#8a4fe0 12px 16px);
+}
+.load-text{font-family:"Press Start 2P",monospace;font-size:11px;color:var(--text)}
+.press{
+  font-family:"Press Start 2P",monospace;font-size:12px;color:var(--yellow);
+  visibility:hidden;cursor:pointer;
+}
+.press.show{visibility:visible;animation:blink .9s steps(2,start) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ---------- Header ---------- */
+header{
+  position:sticky;top:env(safe-area-inset-top,0px);z-index:5;
+  background:linear-gradient(90deg,var(--purple),#5a2fa0);
+  padding:14px 18px;
+  border-bottom:4px solid var(--yellow);
+  box-shadow:0 4px 0 #000;
+  display:flex;gap:12px;flex-wrap:wrap;align-items:center;
+}
+h1{
+  font-family:"Press Start 2P",monospace;
+  font-size:13px;color:var(--yellow);margin:0 14px 0 0;
+  text-shadow:2px 2px 0 #3b1a6e;
+  line-height:1.4;
+}
+input,select,button{
+  background:var(--panel);color:var(--text);
+  border:2px solid var(--yellow);border-radius:6px;
+  padding:8px 10px;font-size:14px;cursor:pointer;
+  font-family:inherit;
+}
+input{cursor:text;min-width:200px;max-width:100%}
+input::placeholder{color:var(--muted)}
+select option{background:var(--panel)}
+button:hover,select:hover{background:var(--panel2)}
+.chips{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.stats-chip{
+  background:var(--yellow);color:#2a1150;
+  font-weight:700;padding:6px 10px;border-radius:6px;font-size:13px;
+  box-shadow:3px 3px 0 #000;
+}
+.sync-chip{background:var(--panel2);color:var(--yellow);border:2px solid var(--yellow);box-shadow:3px 3px 0 #000}
+
+/* ---------- Grid ---------- */
+#grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:14px;padding:20px;
+  padding-left:max(20px,env(safe-area-inset-left,0px));
+  padding-right:max(20px,env(safe-area-inset-right,0px));
+}
+.tile{
+  background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:3px solid var(--line);border-radius:12px;
+  padding:10px 8px;text-align:center;cursor:pointer;position:relative;
+  transition:transform .12s, border-color .12s, box-shadow .12s;
+  box-shadow:0 4px 0 #120624;
+}
+.tile:hover{transform:translateY(-3px);border-color:var(--yellow);box-shadow:0 7px 0 #120624,0 0 16px rgba(255,203,5,.3)}
+.tile.owned{border-color:var(--ok);box-shadow:0 4px 0 #120624,inset 0 0 0 2px rgba(125,255,178,.25)}
+.tile img{width:100px;height:100px;max-width:100%;image-rendering:auto;filter:drop-shadow(0 4px 4px rgba(0,0,0,.4))}
+.tile .n{font-family:"Press Start 2P",monospace;font-size:9px;color:var(--yellow);margin-top:6px}
+.tile .name{font-size:15px;text-transform:capitalize;font-weight:600;margin-top:4px}
+.tile .muted{font-size:12px}
+.badges{position:absolute;top:6px;right:8px;font-size:14px;color:var(--heart)}
+.tile.owned .badges .own{color:var(--ok)}
+
+/* ---------- Popups ---------- */
+.overlay{
+  position:fixed;inset:0;background:rgba(18,6,36,.78);
+  backdrop-filter:blur(5px);
+  display:flex;align-items:flex-start;justify-content:center;overflow:auto;
+  padding:30px 16px;z-index:10;
+}
+.overlay[hidden]{display:none}
+.panel{
+  background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:4px solid var(--yellow);border-radius:14px;
+  padding:18px;width:min(1100px,100%);
+  box-shadow:8px 8px 0 #000;
+}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.panel-head strong{font-family:"Press Start 2P",monospace;font-size:12px;color:var(--yellow);text-align:center;min-width:0}
+.close{
+  background:var(--yellow);color:#2a1150;border:none;border-radius:6px;
+  width:34px;height:34px;font-size:20px;font-weight:700;line-height:1;padding:0;
+}
+.close:hover{background:var(--yellow2)}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}}
+.card{
+  position:relative;cursor:pointer;border-radius:10px;
+  border:3px solid transparent;transition:transform .12s, border-color .12s;
+}
+.card:hover{border-color:var(--yellow);transform:scale(1.03)}
+.card.owned{border-color:var(--ok)}
+.card img{width:100%;border-radius:10px;display:block;box-shadow:0 6px 14px rgba(0,0,0,.5)}
+.card .flags{
+  position:absolute;top:6px;right:6px;font-size:18px;
+  color:var(--heart);text-shadow:0 1px 3px #000;
+}
+.card.owned .flags{color:var(--ok)}
+
+.detail{display:grid;grid-template-columns:minmax(220px,340px) 1fr;gap:24px}
+@media(max-width:700px){.detail{grid-template-columns:1fr}}
+.detail img{width:100%;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.5)}
+.detail h2{font-family:"Press Start 2P",monospace;font-size:15px;color:var(--yellow);line-height:1.5;margin-top:0}
+dl{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:15px;background:rgba(0,0,0,.2);padding:14px;border-radius:10px}
+dt{color:var(--purple);font-weight:600}
+dd{margin:0}
+.actions{display:flex;gap:12px;margin:20px 0;flex-wrap:wrap}
+.actions button{padding:10px 14px;font-weight:700}
+.actions .on{background:var(--heart);border-color:var(--heart);color:#2a0a1a}
+.actions .owned-on{background:var(--ok);border-color:var(--ok);color:#06331a}
+.navgroup{display:flex;gap:10px;align-items:center}
+.navbtn{
+  background:var(--yellow);color:#2a1150;border:none;border-radius:6px;
+  width:40px;height:34px;font-size:16px;font-weight:700;padding:0;
+  box-shadow:0 3px 0 #000;
+}
+.navbtn:hover{background:var(--yellow2)}
+.card.idle{animation:idle 2.4s steps(2,end) infinite}
+@keyframes idle{
+  0%{transform:translateY(0)}
+  50%{transform:translateY(-4px)}
+  100%{transform:translateY(0)}
+}
+.card.idle:hover{animation:none}
+@media(prefers-reduced-motion:reduce){.card.idle{animation:none}}
+.view-cap{font-size:13px;margin-top:6px;text-align:center;color:var(--text)}
+.view-cap b{display:block;font-family:"Press Start 2P",monospace;font-size:9px;color:var(--yellow);margin-bottom:4px}
+#viewSub{margin:-4px 0 14px}
+.binder{display:grid;gap:10px;align-items:start}
+.binder[data-cols="4"]{grid-template-columns:repeat(4,minmax(0,1fr))}
+.binder[data-cols="6"]{grid-template-columns:repeat(6,minmax(0,1fr))}
+.binder[data-cols="9"]{grid-template-columns:repeat(9,minmax(0,1fr))}
+@media(max-width:700px){
+  .binder[data-cols="4"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .binder[data-cols="6"],.binder[data-cols="9"]{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+.card.have img{opacity:.35;filter:grayscale(1)}
+.colpick{display:flex;align-items:center;gap:8px;margin:-6px 0 14px;flex-wrap:wrap}
+.colpick[hidden]{display:none}
+.colpick button.on{background:var(--yellow);color:#2a1150}
+#viewBack{width:auto;padding:0 10px;font-size:12px}
+.setlist input{width:100%;margin-bottom:12px}
+.setrow{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;margin-bottom:8px;text-align:left}
+.setrow .muted{font-size:12px;white-space:nowrap}
+.slot{
+  text-align:left;color:var(--text);cursor:pointer;font:inherit;min-width:0;
+  background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:2px solid var(--line);border-radius:10px;padding:10px;
+}
+.slot.owned{border-color:var(--ok)}
+.slot.empty{background:transparent;border:2px dashed var(--line);color:var(--muted)}
+.slot:hover{border-color:var(--yellow)}
+.slot .sn{font-family:"Press Start 2P",monospace;font-size:9px;color:var(--yellow)}
+.slot .sname{font-weight:700;margin-top:6px;text-transform:capitalize}
+.slot .scard{font-size:12px;margin-top:4px;color:var(--muted);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+a{color:var(--yellow)}
+.muted{color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+
+<!-- Title / loading screen -->
+<div id="boot">
+  <div class="stars" id="stars"></div>
+  <div class="logo pixel">
+    The Original<span class="dot">.</span>Collection
+    <small>Gen I Card Tracker</small>
+  </div>
+  <div class="ball" aria-hidden="true"></div>
+  <div class="bar"><i id="barfill"></i></div>
+  <div class="load-text" id="loadtext">LOADING POKeMON...</div>
+  <div class="press" id="press">PRESS START</div>
+</div>
+
+<header>
+  <h1>The Original.<br>Collection</h1>
+  <input id="search" placeholder="Search Pokémon or #">
+  <select id="filter">
+    <option value="all">Show all</option>
+    <option value="owned">Owned</option>
+    <option value="wish">Wishlist</option>
+    <option value="missing">Not started</option>
+  </select>
+  <button id="openOwned">✓ My Binder</button>
+  <button id="openWish">♥ Wishlist</button>
+  <button id="openSets">◎ Sets</button>
+  <button id="openArtists">✎ Illustrators</button>
+  <button id="backupBtn">Backup</button>
+  <button id="importBtn">Import</button>
+  <button id="signOutBtn">Sign out</button>
+  <div class="chips">
+    <span class="stats-chip" id="stats"></span>
+    <span class="stats-chip sync-chip" id="sync">Connecting…</span>
+  </div>
+</header>
+
+<div id="grid"></div>
+
+<!-- Collection / wishlist summary -->
+<div class="overlay" id="viewOverlay" hidden>
+  <div class="panel">
+    <div class="panel-head">
+      <button class="navbtn" id="viewBack" hidden>◀ Sets</button>
+      <strong id="viewTitle"></strong>
+      <button class="close" data-close="viewOverlay">×</button>
+    </div>
+    <p class="muted" id="viewSub"></p>
+    <div class="colpick" id="colpick" hidden>
+      <span class="muted">Cards per row:</span>
+      <button data-cols="4">4</button>
+      <button data-cols="6">6</button>
+      <button data-cols="9">9</button>
+    </div>
+    <div class="cards" id="viewGrid"></div>
+  </div>
+</div>
+
+<!-- Backup -->
+<div class="overlay" id="backupOverlay" hidden>
+  <div class="panel">
+    <div class="panel-head">
+      <span></span>
+      <strong>Backup</strong>
+      <button class="close" data-close="backupOverlay">×</button>
+    </div>
+    <p class="muted" id="backupCount"></p>
+    <p class="muted">Copy this text and keep it somewhere safe. It holds every card you've marked as owned or wishlisted.</p>
+    <textarea id="backupText" readonly style="width:100%;min-height:200px;font-family:monospace;font-size:12px;background:var(--panel);color:var(--text);border:2px solid var(--yellow);border-radius:6px;padding:8px;margin-top:10px"></textarea>
+    <div class="actions">
+      <button id="backupCopy">Copy</button>
+      <span class="muted" id="backupMsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Sign in -->
+<div class="overlay" id="loginOverlay" hidden>
+  <div class="panel">
+    <div class="panel-head"><span></span><strong>Sign in</strong><span></span></div>
+    <p class="muted">Enter your email and we'll send a sign-in link. Each device needs its own sign-in.</p>
+    <form id="loginForm" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <input id="loginEmail" type="email" placeholder="you@example.com" required style="flex:1;min-width:0">
+      <button type="submit">Send link</button>
+    </form>
+    <p class="muted" id="loginMsg"></p>
+  </div>
+</div>
+
+<!-- Import marks -->
+<div class="overlay" id="importOverlay" hidden>
+  <div class="panel">
+    <div class="panel-head"><span></span><strong>Import marks</strong><button class="close" data-close="importOverlay">×</button></div>
+    <p class="muted">Paste the text from your Backup here. Those marks are added to your synced collection.</p>
+    <textarea id="importText" style="width:100%;min-height:180px;font-family:monospace;font-size:12px;background:var(--panel);color:var(--text);border:2px solid var(--yellow);border-radius:6px;padding:8px;margin-top:10px"></textarea>
+    <div class="actions"><button id="importRun">Import</button><span class="muted" id="importMsg"></span></div>
+  </div>
+</div>
+
+<!-- Pokémon card list -->
+<div class="overlay" id="listOverlay" hidden>
+  <div class="panel">
+    <div class="panel-head">
+      <button class="navbtn" id="prevPoke" title="Previous Pokémon">◀</button>
+      <strong id="listTitle"></strong>
+      <div class="navgroup">
+        <button class="navbtn" id="nextPoke" title="Next Pokémon">▶</button>
+        <button class="close" data-close="listOverlay">×</button>
+      </div>
+    </div>
+    <div class="cards" id="cardGrid"><p class="muted">Loading cards…</p></div>
+  </div>
+</div>
+
+<!-- Single card detail -->
+<div class="overlay" id="detailOverlay" hidden>
+  <div class="panel">
+    <div class="panel-head"><span></span><button class="close" data-close="detailOverlay">×</button></div>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<script>
+const KEY = 'original151-tracker-v1';
+const cache = {};
+let pokes = [];
+let state = { cards: {} };   // card id -> { n, wish, owned }
+let db = null;               // shared store when signed in; null means this-device fallback
+let syncMode = 'connecting'; // 'connecting' | 'cloud' | 'local'
+const writeQueue = {};       // one write at a time per document
+
+/* ---------- Title screen ---------- */
+(function buildStars(){
+  const box = document.getElementById('stars');
+  for(let i=0;i<40;i++){
+    const s = document.createElement('i');
+    s.style.left = Math.random()*100 + '%';
+    s.style.top = Math.random()*100 + '%';
+    s.style.animationDelay = (Math.random()*1.6).toFixed(2) + 's';
+    s.style.width = s.style.height = (Math.random()<.2 ? 6 : 4) + 'px';
+    box.appendChild(s);
+  }
+})();
+
+const bootStart = Date.now();
+const BOOT_MIN_MS = 2600;
+let dataReady = false;
+let bootDone = false;
+
+(function animateBar(){
+  const fill = document.getElementById('barfill');
+  const text = document.getElementById('loadtext');
+  const steps = ['LOADING POKeMON...','LOADING CARDS...','GETTING READY...'];
+  let p = 0;
+  const t = setInterval(() => {
+    if(!dataReady){
+      p = Math.min(p + 3 + Math.random()*4, 90);
+    } else {
+      p = Math.min(p + 10, 100);
+    }
+    fill.style.width = p + '%';
+    text.textContent = steps[Math.min(Math.floor(p/35), 2)];
+    if(p >= 100){
+      clearInterval(t);
+      showPress();
+    }
+  }, 120);
+})();
+
+function showPress(){
+  const elapsed = Date.now() - bootStart;
+  const wait = Math.max(0, BOOT_MIN_MS - elapsed);
+  setTimeout(() => {
+    document.getElementById('press').classList.add('show');
+    document.getElementById('loadtext').textContent = 'READY!';
+  }, wait);
+}
+
+function enterGame(){
+  if(bootDone) return;
+  bootDone = true;
+  document.getElementById('boot').classList.add('gone');
+}
+document.getElementById('boot').addEventListener('click', () => {
+  if(document.getElementById('press').classList.contains('show')) enterGame();
+});
+document.addEventListener('keydown', e => {
+  if(!bootDone && document.getElementById('press').classList.contains('show')) enterGame();
+});
+
+/* ---------- Storage ---------- */
+function loadLocal(){
+  try { return JSON.parse(localStorage.getItem(KEY)) || { cards: {} }; }
+  catch(e){ return { cards: {} }; }
+}
+function saveLocal(){
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+}
+function setSyncLabel(t){
+  const el = document.getElementById('sync');
+  if(el) el.textContent = t;
+}
+
+/* ---------- Sign-in and synced marks (Supabase) ---------- */
+const SUPABASE_URL = 'https://moxjqllgzbnurautuaxt.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_vpE-sVpzP5z_C6Bs5upBhA_GrqxXjqa';
+let sb = null;
+
+function showOverlay(id, show){ document.getElementById(id).hidden = !show; }
+
+// Load every mark for the signed-in user, then redraw.
+async function loadMarks(){
+  setSyncLabel('Syncing…');
+  const { data, error } = await sb.from('marks').select('*');
+  if(error){ setSyncLabel('Sync unavailable'); return; }
+  const cards = {};
+  data.forEach(r => {
+    cards[r.card_id] = { n: r.n, wish: r.wish, owned: r.owned, id: r.card_id, name: r.name, img: r.img, rd: r.rd };
+  });
+  state.cards = cards;
+  syncMode = 'cloud';
+  setSyncLabel('☁ Synced');
+  renderGrid();
+  refreshOpenCards();
+  if(!document.getElementById('viewOverlay').hidden) refreshOpenView();
+}
+
+async function connectStore(){
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  document.getElementById('loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const msg = document.getElementById('loginMsg');
+    if(!email) return;
+    msg.textContent = 'Sending…';
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: location.href.split('#')[0] }
+    });
+    msg.textContent = error ? ('Could not send the link: ' + error.message)
+                            : 'Check your email and open the link on this device.';
+  });
+
+  document.getElementById('signOutBtn').onclick = async () => {
+    await sb.auth.signOut();
+    location.reload();
+  };
+
+  document.getElementById('importBtn').onclick = () => {
+    document.getElementById('importMsg').textContent = '';
+    showOverlay('importOverlay', true);
+  };
+  document.getElementById('importRun').onclick = async () => {
+    const msg = document.getElementById('importMsg');
+    let parsed;
+    try{ parsed = JSON.parse(document.getElementById('importText').value); }
+    catch(e){ msg.textContent = 'That text is not a valid backup.'; return; }
+    if(!parsed || !parsed.cards || typeof parsed.cards !== 'object'){
+      msg.textContent = 'No marks found in that text.'; return;
+    }
+    const rows = Object.entries(parsed.cards)
+      .filter(([, v]) => v && v.n && (v.owned || v.wish))
+      .map(([id, v]) => ({
+        card_id: id, n: v.n, wish: !!v.wish, owned: !!v.owned,
+        name: v.name || '', img: v.img || '', rd: v.rd || ''
+      }));
+    msg.textContent = `Importing ${rows.length} cards…`;
+    for(let i = 0; i < rows.length; i += 100){
+      const { error } = await sb.from('marks').upsert(rows.slice(i, i + 100));
+      if(error){ msg.textContent = 'Import failed: ' + error.message; return; }
+    }
+    msg.textContent = `Imported ${rows.length} cards.`;
+    await loadMarks();
+  };
+
+  const { data } = await sb.auth.getSession();
+  if(!data.session){
+    setSyncLabel('Sign in to sync');
+    showOverlay('loginOverlay', true);
+    return;
+  }
+  await loadMarks();
+  // Pick up changes made on other devices when this one comes back into view
+  document.addEventListener('visibilitychange', () => {
+    if(!document.hidden && syncMode === 'cloud') loadMarks();
+  });
+}
+
+// Queue writes per card so two quick taps never overlap on one document.
+function writeMark(id, value){
+  if(!sb || syncMode !== 'cloud') return;
+  const prev = writeQueue[id] || Promise.resolve();
+  writeQueue[id] = prev.then(async () => {
+    try{
+      const result = value
+        ? await sb.from('marks').upsert({
+            card_id: id, n: value.n, wish: !!value.wish, owned: !!value.owned,
+            name: value.name || '', img: value.img || '', rd: value.rd || ''
+          })
+        : await sb.from('marks').delete().eq('card_id', id);
+      if(result.error) throw result.error;
+      setSyncLabel('☁ Synced');
+    }catch(e){
+      setSyncLabel('Save failed, try again');
+    }
+  });
+}
+
+function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+function cardState(id){ return state.cards[id] || {}; }
+
+function setFlag(card, flag, value){
+  const n = card.nationalPokedexNumbers?.[0];
+  const prev = state.cards[card.id] || {};
+  // Save the card's art and details with the mark, so collection and
+  // wishlist views don't depend on the card service to show them.
+  const s = {
+    n,
+    wish: !!prev.wish,
+    owned: !!prev.owned,
+    id: card.id,
+    name: card.name || '',
+    img: card.images?.large || prev.img || '',
+    rd: card.set?.releaseDate || prev.rd || '',
+  };
+  s[flag] = value;
+  if(!s.wish && !s.owned){
+    delete state.cards[card.id];
+    writeMark(card.id, null);
+  } else {
+    state.cards[card.id] = s;
+    writeMark(card.id, { n: s.n, wish: s.wish, owned: s.owned, id: s.id, name: s.name, img: s.img, rd: s.rd });
+  }
+  refreshCardMarks(card.id);
+  renderGrid();
+  // Keep an open collection or wishlist view in step with the change
+  if(!document.getElementById('viewOverlay').hidden) refreshOpenView();
+}
+
+/* ---------- Card data ---------- */
+async function fetchJson(url){
+  let lastErr;
+  for(let attempt = 1; attempt <= 3; attempt++){
+    try{
+      const r = await fetch(url, { signal: AbortSignal.timeout?.(8000) });
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    }catch(e){
+      lastErr = e;
+      await new Promise(res => setTimeout(res, 800 * attempt));
+    }
+  }
+  throw lastErr;
+}
+
+async function cardsFor(n){
+  if(cache[n]) return cache[n];
+  let all = [], page = 1, total = Infinity;
+  while(all.length < total){
+    const url = `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${n}&orderBy=set.releaseDate&pageSize=250&page=${page}`;
+    const j = await fetchJson(url);
+    if(!j.data || !j.data.length) break;
+    all = all.concat(j.data);
+    total = j.totalCount;
+    page++;
+  }
+  return (cache[n] = all);
+}
+
+function marketPrice(c){
+  const prices = c.tcgplayer?.prices;
+  if(!prices) return 'No price data';
+  const v = Object.values(prices).find(x => x && x.market);
+  return v ? `$${v.market.toFixed(2)}` : 'No price data';
+}
+
+async function init(){
+  try{
+    const r = await fetch('https://pokeapi.co/api/v2/pokemon?limit=151');
+    const j = await r.json();
+    pokes = j.results.map((p, i) => ({ id: i + 1, name: p.name }));
+  }catch(e){
+    pokes = Array.from({length:151},(_,i)=>({id:i+1,name:'#'+(i+1)}));
+  }
+  renderGrid();
+  dataReady = true;
+}
+
+function counts(n){
+  const cards = Object.values(state.cards).filter(x => x.n === n);
+  return { owned: cards.filter(x => x.owned).length, wish: cards.filter(x => x.wish).length };
+}
+
+function renderGrid(){
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const f = document.getElementById('filter').value;
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  let ownedTotal = 0, wishTotal = 0;
+
+  pokes.forEach(p => {
+    const c = counts(p.id);
+    ownedTotal += c.owned > 0 ? 1 : 0;
+    wishTotal += c.wish > 0 ? 1 : 0;
+
+    const matchSearch = !q || p.name.includes(q) || String(p.id) === q;
+    const matchFilter =
+      f === 'all' ||
+      (f === 'owned' && c.owned > 0) ||
+      (f === 'wish' && c.wish > 0) ||
+      (f === 'missing' && !c.owned && !c.wish);
+    if(!matchSearch || !matchFilter) return;
+
+    const el = document.createElement('div');
+    el.className = 'tile' + (c.owned ? ' owned' : '');
+    el.innerHTML = `
+      <div class="badges">${c.wish ? '♥' : ''}${c.owned ? '<span class="own">✓</span>' : ''}</div>
+      <img loading="lazy" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${p.id}.png" alt="">
+      <div class="n">#${p.id}</div>
+      <div class="name">${cap(p.name)}</div>
+      <div class="muted">${c.owned} owned · ${c.wish} wished</div>`;
+    el.onclick = () => openPokemon(p);
+    grid.appendChild(el);
+  });
+
+  document.getElementById('stats').textContent =
+    `${ownedTotal}/151 owned · ${wishTotal} wished`;
+}
+
+let currentPoke = null;
+
+let currentKind = null; // null = all printings; 'owned' or 'wish' = only marked ones
+
+async function openPokemon(p, kind = null){
+  currentPoke = p;
+  currentKind = kind;
+  const overlay = document.getElementById('listOverlay');
+  document.getElementById('listTitle').textContent = `#${p.id} ${cap(p.name)}`;
+  overlay.hidden = false;
+  const box = document.getElementById('cardGrid');
+  box.innerHTML = '<p class="muted">Loading cards…</p>';
+  let cards;
+  try{
+    cards = await cardsFor(p.id);
+  }catch(e){
+    box.innerHTML = `<p class="muted">Couldn't load cards for this Pokémon right now.</p>
+      <button id="retryBtn">Try again</button>`;
+    document.getElementById('retryBtn').onclick = () => openPokemon(p, kind);
+    return;
+  }
+  if(kind){
+    cards = cards.filter(c => cardState(c.id)[kind]).sort(byReleaseDesc);
+  }
+  if(!cards.length){ box.innerHTML = '<p class="muted">No cards found.</p>'; return; }
+
+  box.innerHTML = '';
+  cards.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'card' + (Math.random() < 0.3 ? ' idle' : '');
+    el.style.animationDelay = (Math.random() * 2.5).toFixed(2) + 's';
+    el.dataset.id = c.id;
+    el.innerHTML = `<img loading="lazy" src="${c.images.large}" alt="${c.name}">
+                    <div class="flags"></div>`;
+    el.onclick = () => openDetail(c);
+    box.appendChild(el);
+    refreshCardMark(el, c.id);
+  });
+}
+
+function stepPokemon(delta){
+  if(!currentPoke) return;
+  const i = pokes.findIndex(p => p.id === currentPoke.id);
+  const next = pokes[(i + delta + pokes.length) % pokes.length];
+  openPokemon(next, currentKind);
+}
+document.getElementById('prevPoke').onclick = () => stepPokemon(-1);
+document.getElementById('nextPoke').onclick = () => stepPokemon(1);
+document.addEventListener('keydown', e => {
+  const open = !document.getElementById('listOverlay').hidden;
+  if(!open) return;
+  if(e.key === 'ArrowRight') stepPokemon(1);
+  if(e.key === 'ArrowLeft') stepPokemon(-1);
+});
+
+/* ---------- Collection & wishlist views ---------- */
+const byReleaseDesc = (a, b) => (b.set?.releaseDate || '').localeCompare(a.set?.releaseDate || '');
+
+// One tile per Pokémon, showing the newest marked printing.
+// Tap a tile to see every marked printing of that Pokémon.
+async function openView(kind){
+  const overlay = document.getElementById('viewOverlay');
+  const grid = document.getElementById('viewGrid');
+  document.getElementById('viewTitle').textContent = kind === 'owned' ? 'My Collection' : 'Wishlist';
+  document.getElementById('viewSub').textContent = 'Loading…';
+  grid.innerHTML = '';
+  overlay.hidden = false;
+  currentView = kind;
+  grid.className = kind === 'owned' ? 'binder' : 'cards';
+  updateViewChrome();
+  if(kind === 'owned'){ return openBinder(); }
+
+  const marks = Object.entries(state.cards).filter(([, s]) => s[kind] && s.n);
+  const total = marks.length;
+  const byPoke = {};
+  marks.forEach(([id, s]) => { (byPoke[s.n] = byPoke[s.n] || []).push({ id, ...s }); });
+  const nums = Object.keys(byPoke).map(Number).sort((a, b) => a - b);
+
+  // Newer marks carry their own art. Older marks need the card list, which
+  // is only fetched for the Pokémon that have them.
+  const needLookup = nums.filter(n => byPoke[n].some(m => !m.img));
+  const lookedUp = {};
+  await Promise.all(needLookup.map(async n => {
+    try{ lookedUp[n] = await cardsFor(n); }catch(e){ lookedUp[n] = []; }
+  }));
+
+  const rows = nums.map(n => {
+    const found = new Map((lookedUp[n] || []).map(c => [c.id, c]));
+    const entries = byPoke[n].map(m => {
+      if(m.img) return { id: m.id, img: m.img, name: m.name || '', rd: m.rd || '' };
+      const c = found.get(m.id);
+      return c ? { id: m.id, img: c.images.large, name: c.name, rd: c.set?.releaseDate || '' } : null;
+    }).filter(Boolean);
+    entries.sort((a, b) => b.rd.localeCompare(a.rd));
+    return { n, mine: entries };
+  }).filter(r => r.mine.length);
+
+  document.getElementById('viewSub').textContent =
+    `${rows.length} Pokémon · ${total} card${total === 1 ? '' : 's'} · tap one to see every printing`;
+  if(!rows.length){
+    grid.innerHTML = '<p class="muted">Nothing here yet. Mark some cards to see them.</p>';
+    return;
+  }
+  rows.forEach(({ n, mine }) => {
+    const p = pokes.find(x => x.id === n) || { id: n, name: '#' + n };
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.innerHTML = `<img loading="lazy" src="${mine[0].img}" alt="${mine[0].name}">
+      <div class="view-cap"><b>#${n}</b>${cap(p.name)}<br>${mine.length} ${kind === 'owned' ? 'owned' : 'wished'}</div>`;
+    el.onclick = () => openPokemon(p, kind);
+    grid.appendChild(el);
+  });
+}
+
+/* ---------- Columns, sets, and view helpers ---------- */
+let currentSet = null;
+const setCache = {};
+let setListCache = null;
+
+function getCols(){
+  try{
+    const v = Number(localStorage.getItem('original151-cols'));
+    if([4, 6, 9].includes(v)) return v;
+  }catch(e){}
+  return 4;
+}
+function setCols(n){
+  try{ localStorage.setItem('original151-cols', String(n)); }catch(e){}
+  applyCols(document.getElementById('viewGrid'));
+}
+function applyCols(grid){
+  grid.dataset.cols = String(getCols());
+  updateColPick();
+}
+function updateColPick(){
+  const c = String(getCols());
+  document.querySelectorAll('#colpick button').forEach(b => b.classList.toggle('on', b.dataset.cols === c));
+}
+function updateViewChrome(){
+  const binderLike = ['owned', 'set', 'artist'].includes(currentView);
+  document.getElementById('colpick').hidden = !binderLike;
+  const back = document.getElementById('viewBack');
+  back.hidden = currentView !== 'set' && currentView !== 'artist';
+  back.textContent = currentView === 'artist' ? '◀ Illustrators' : '◀ Sets';
+}
+function refreshOpenView(){
+  if(currentView === 'artist' && currentArtist) return openArtist(currentArtist);
+  if(currentView === 'set' && currentSet) return openSet(currentSet);
+  if(currentView === 'owned' || currentView === 'wish') return openView(currentView);
+}
+
+async function loadSets(){
+  if(setListCache) return setListCache;
+  const j = await fetchJson('https://api.pokemontcg.io/v2/sets?pageSize=250');
+  setListCache = (j.data || []).slice().sort((a, b) => (b.releaseDate || '').localeCompare(a.releaseDate || ''));
+  return setListCache;
+}
+
+// Every Gen I card in one set, fetched once and kept for this visit.
+async function fetchSetCards(setId){
+  if(setCache[setId]) return setCache[setId];
+  let all = [], page = 1, total = Infinity;
+  while(all.length < total){
+    const url = `https://api.pokemontcg.io/v2/cards?q=set.id:${encodeURIComponent(setId)}&pageSize=250&page=${page}`;
+    const j = await fetchJson(url);
+    if(!j.data || !j.data.length) break;
+    all = all.concat(j.data);
+    total = j.totalCount;
+    page++;
+  }
+  return (setCache[setId] = all.filter(c => {
+    const n = c.nationalPokedexNumbers?.[0];
+    return n >= 1 && n <= 151;
+  }));
+}
+
+async function openSets(){
+  currentView = 'sets';
+  currentSet = null;
+  document.getElementById('viewOverlay').hidden = false;
+  document.getElementById('viewTitle').textContent = 'Sets';
+  document.getElementById('viewSub').textContent = '';
+  const grid = document.getElementById('viewGrid');
+  grid.className = 'setlist';
+  grid.innerHTML = '<input id="setSearch" placeholder="Search sets, e.g. Pitch Black"><div id="setItems"><p class="muted">Loading sets…</p></div>';
+  updateViewChrome();
+
+  let sets;
+  try{ sets = await loadSets(); }
+  catch(e){
+    document.getElementById('setItems').innerHTML = '<p class="muted">Couldn\'t load sets right now.</p>';
+    return;
+  }
+  if(currentView !== 'sets') return;
+
+  const draw = q => {
+    const list = document.getElementById('setItems');
+    list.innerHTML = '';
+    sets.filter(s => !q || s.name.toLowerCase().includes(q) || (s.series || '').toLowerCase().includes(q))
+      .forEach(s => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'setrow';
+        b.innerHTML = `<span>${s.name}</span><span class="muted">${s.series || ''} · ${(s.releaseDate || '').slice(0, 4)}</span>`;
+        b.onclick = () => openSet(s);
+        list.appendChild(b);
+      });
+  };
+  draw('');
+  document.getElementById('setSearch').addEventListener('input', e => draw(e.target.value.trim().toLowerCase()));
+}
+
+async function openSet(set){
+  currentView = 'set';
+  currentSet = set;
+  document.getElementById('viewOverlay').hidden = false;
+  document.getElementById('viewTitle').textContent = set.name;
+  const sub = document.getElementById('viewSub');
+  const grid = document.getElementById('viewGrid');
+  sub.textContent = 'Loading cards…';
+  grid.className = 'binder';
+  grid.innerHTML = '';
+  applyCols(grid);
+  updateViewChrome();
+
+  let cards;
+  try{ cards = await fetchSetCards(set.id); }
+  catch(e){ sub.textContent = "Couldn't load this set right now."; return; }
+  if(currentView !== 'set' || currentSet !== set) return;
+
+  cards = cards.slice().sort((a, b) =>
+    (parseInt(a.number, 10) || 0) - (parseInt(b.number, 10) || 0) || String(a.number).localeCompare(String(b.number)));
+  const owned = cards.filter(c => cardState(c.id).owned).length;
+  const wish = cards.filter(c => cardState(c.id).wish).length;
+  sub.textContent = `${cards.length} Gen I cards in this set · ${owned} owned · ${wish} wishlisted`;
+  if(!cards.length){ grid.innerHTML = '<p class="muted">No Gen I Pokémon cards in this set.</p>'; return; }
+
+  cards.forEach(c => {
+    const s = cardState(c.id);
+    const el = document.createElement('div');
+    el.className = 'card' + (s.owned ? ' have' : '');
+    el.innerHTML = `<img loading="lazy" src="${c.images.large}" alt="${c.name}"><div class="flags">${s.wish ? '♥' : ''}${s.owned ? ' ✓' : ''}</div>`;
+    el.onclick = () => openDetail(c);
+    grid.appendChild(el);
+  });
+}
+
+/* ---------- Illustrator search ---------- */
+let currentArtist = null;
+const artistCache = {};
+
+async function fetchArtistCards(name){
+  const key = name.toLowerCase();
+  if(artistCache[key]) return artistCache[key];
+  const q = `artist:"${name.replace(/"/g, '')}"`;
+  let all = [], page = 1, total = Infinity;
+  while(all.length < total){
+    const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q)}&pageSize=250&page=${page}`;
+    const j = await fetchJson(url);
+    if(!j.data || !j.data.length) break;
+    all = all.concat(j.data);
+    total = j.totalCount;
+    page++;
+  }
+  return (artistCache[key] = all.filter(c => {
+    const n = c.nationalPokedexNumbers?.[0];
+    return n >= 1 && n <= 151;
+  }));
+}
+
+async function openArtists(){
+  currentView = 'artists';
+  currentArtist = null;
+  document.getElementById('viewOverlay').hidden = false;
+  document.getElementById('viewTitle').textContent = 'Illustrators';
+  document.getElementById('viewSub').textContent = '';
+  const grid = document.getElementById('viewGrid');
+  grid.className = 'setlist';
+  grid.innerHTML = '<form id="artistForm" style="display:flex;gap:8px;margin-bottom:12px"><input id="artistSearch" placeholder="Illustrator name, e.g. Asako Ito" style="flex:1;min-width:0;margin:0"><button type="submit">Search</button></form>';
+  updateViewChrome();
+  document.getElementById('artistForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const name = document.getElementById('artistSearch').value.trim();
+    if(name) openArtist(name);
+  });
+}
+
+async function openArtist(name){
+  currentView = 'artist';
+  currentArtist = name;
+  document.getElementById('viewOverlay').hidden = false;
+  document.getElementById('viewTitle').textContent = name;
+  const sub = document.getElementById('viewSub');
+  const grid = document.getElementById('viewGrid');
+  sub.textContent = 'Loading cards…';
+  grid.className = 'binder';
+  grid.innerHTML = '';
+  applyCols(grid);
+  updateViewChrome();
+
+  let cards;
+  try{ cards = await fetchArtistCards(name); }
+  catch(e){ sub.textContent = "Couldn't load cards for this illustrator right now."; return; }
+  if(currentView !== 'artist' || currentArtist !== name) return;
+
+  cards = cards.slice().sort(byReleaseDesc);
+  const owned = cards.filter(c => cardState(c.id).owned).length;
+  const wish = cards.filter(c => cardState(c.id).wish).length;
+  sub.textContent = `${cards.length} Gen I cards by this illustrator · ${owned} owned · ${wish} wishlisted`;
+  if(!cards.length){ grid.innerHTML = '<p class="muted">No Gen I cards found for this illustrator.</p>'; return; }
+
+  cards.forEach(c => {
+    const s = cardState(c.id);
+    const el = document.createElement('div');
+    el.className = 'card' + (s.owned ? ' have' : '');
+    el.innerHTML = `<img loading="lazy" src="${c.images.large}" alt="${c.name}"><div class="flags">${s.wish ? '♥' : ''}${s.owned ? ' ✓' : ''}</div>`;
+    el.onclick = () => openDetail(c);
+    grid.appendChild(el);
+  });
+}
+
+/* ---------- Binder (My cards) ---------- */
+let currentView = null; // 'owned', 'wish', 'sets', or 'set' while a view is open
+
+async function openBinder(){
+  document.getElementById('viewTitle').textContent = 'My Binder';
+  const sub = document.getElementById('viewSub');
+  const grid = document.getElementById('viewGrid');
+  grid.innerHTML = '';
+  applyCols(grid);
+  updateViewChrome();
+
+  const owned = Object.entries(state.cards).filter(([, s]) => s.owned && s.n);
+  const ownedByPoke = {};
+  owned.forEach(([id, s]) => { (ownedByPoke[s.n] = ownedByPoke[s.n] || []).push(id); });
+  sub.textContent = `${Object.keys(ownedByPoke).length} of 151 Pokémon · ${owned.length} owned · tap a slot to see its cards`;
+
+  // Card names and set names for owned cards come from the card list
+  const lookedUp = {};
+  await Promise.all(Object.keys(ownedByPoke).map(async n => {
+    try{ lookedUp[n] = await cardsFor(Number(n)); }catch(e){ lookedUp[n] = []; }
+  }));
+
+  for(let n = 1; n <= 151; n++){
+    const p = pokes.find(x => x.id === n) || { id: n, name: '#' + n };
+    const slot = document.createElement('button');
+    slot.type = 'button';
+    const ids = ownedByPoke[n];
+    if(ids){
+      const found = new Map((lookedUp[n] || []).map(c => [c.id, c]));
+      const cards = ids.map(id => found.get(id)).filter(Boolean).sort(byReleaseDesc);
+      const top = cards[0];
+      const label = top ? `${top.name} · ${top.set.name}` : (state.cards[ids[0]].name || 'Owned');
+      const extra = ids.length > 1 ? ` (+${ids.length - 1} more)` : '';
+      slot.className = 'slot owned';
+      slot.innerHTML = `<div class="sn">#${n}</div><div class="sname">${cap(p.name)}</div><div class="scard">${label}${extra}</div>`;
+      slot.onclick = () => openPokemon(p, 'owned');
+    } else {
+      slot.className = 'slot empty';
+      slot.innerHTML = `<div class="sn">#${n}</div><div class="sname">${cap(p.name)}</div><div class="scard">Missing</div>`;
+      slot.onclick = () => openPokemon(p, 'wish');
+    }
+    grid.appendChild(slot);
+  }
+}
+
+function refreshCardMark(el, id){
+  const s = cardState(id);
+  el.classList.toggle('owned', !!s.owned);
+  el.querySelector('.flags').textContent = (s.wish ? '♥' : '') + (s.owned ? ' ✓' : '');
+}
+function refreshCardMarks(id){
+  document.querySelectorAll(`.card[data-id="${CSS.escape(id)}"]`).forEach(el => refreshCardMark(el, id));
+}
+function refreshOpenCards(){
+  document.querySelectorAll('.card[data-id]').forEach(el => refreshCardMark(el, el.dataset.id));
+}
+
+function openDetail(c){
+  const s = cardState(c.id);
+  const body = document.getElementById('detailBody');
+  const n = c.nationalPokedexNumbers?.[0];
+  body.innerHTML = `
+    <div class="detail">
+      <img src="${c.images.large}" alt="${c.name}">
+      <div>
+        <h2>${c.name}</h2>
+        <dl>
+          <dt>Pokédex #</dt><dd>${n ?? '—'}</dd>
+          <dt>Set</dt><dd>${c.set.name}</dd>
+          <dt>Series</dt><dd>${c.set.series}</dd>
+          <dt>Set number</dt><dd>${c.number} / ${c.set.printedTotal}</dd>
+          <dt>Release date</dt><dd>${c.set.releaseDate}</dd>
+          <dt>Illustrator</dt><dd>${c.artist ?? '—'}</dd>
+          <dt>Rarity</dt><dd>${c.rarity ?? '—'}</dd>
+          <dt>Market price</dt><dd>${marketPrice(c)}</dd>
+        </dl>
+        <div class="actions">
+          <button id="wishBtn" class="${s.wish ? 'on' : ''}">${s.wish ? '♥ On wishlist' : '♡ Add to wishlist'}</button>
+          <button id="ownBtn" class="${s.owned ? 'owned-on' : ''}">${s.owned ? '✓ Owned' : 'Mark as owned'}</button>
+        </div>
+        ${c.tcgplayer?.url ? `<a href="${c.tcgplayer.url}" target="_blank" rel="noopener">View on TCGplayer ↗</a>` : ''}
+      </div>
+    </div>`;
+  document.getElementById('detailOverlay').hidden = false;
+
+  document.getElementById('wishBtn').onclick = () => { setFlag(c, 'wish', !cardState(c.id).wish); openDetail(c); };
+  document.getElementById('ownBtn').onclick  = () => { setFlag(c, 'owned', !cardState(c.id).owned); openDetail(c); };
+}
+
+document.querySelectorAll('[data-close]').forEach(b =>
+  b.onclick = () => document.getElementById(b.dataset.close).hidden = true);
+document.querySelectorAll('.overlay').forEach(o =>
+  o.addEventListener('click', e => { if(e.target === o) o.hidden = true; }));
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') document.querySelectorAll('.overlay').forEach(o => o.hidden = true);
+});
+document.getElementById('search').addEventListener('input', renderGrid);
+document.getElementById('filter').addEventListener('change', renderGrid);
+
+document.getElementById('openOwned').onclick = () => openView('owned');
+document.getElementById('openWish').onclick = () => openView('wish');
+document.getElementById('openSets').onclick = () => openSets();
+document.getElementById('openArtists').onclick = () => openArtists();
+document.getElementById('viewBack').onclick = () => (currentView === 'artist' ? openArtists() : openSets());
+document.querySelectorAll('#colpick button').forEach(b => b.onclick = () => setCols(Number(b.dataset.cols)));
+
+document.getElementById('backupBtn').onclick = () => {
+  const owned = Object.values(state.cards).filter(s => s.owned).length;
+  const wish = Object.values(state.cards).filter(s => s.wish).length;
+  document.getElementById('backupCount').textContent = `${owned} owned · ${wish} wishlisted`;
+  document.getElementById('backupMsg').textContent = '';
+  const ta = document.getElementById('backupText');
+  ta.value = JSON.stringify({ app: 'original151', version: 1, savedAt: new Date().toISOString(), cards: state.cards }, null, 2);
+  document.getElementById('backupOverlay').hidden = false;
+  ta.focus();
+  ta.select();
+};
+document.getElementById('backupCopy').onclick = async () => {
+  const ta = document.getElementById('backupText');
+  const msg = document.getElementById('backupMsg');
+  try{
+    await navigator.clipboard.writeText(ta.value);
+    msg.textContent = 'Copied.';
+  }catch(e){
+    ta.focus(); ta.select();
+    msg.textContent = 'Press Ctrl+C (or Cmd+C) to copy the selected text.';
+  }
+};
+
+init();
+connectStore();
+</script>
+</body>
+</html>
